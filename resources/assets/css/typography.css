@@ -1,0 +1,28 @@
+h1, h2, h3, h4, h5, h6 {
+	font-weight: 700;
+}
+
+a {
+	text-decoration: none;
+	color: inherit;
+	-webkit-tap-highlight-color: transparent;
+}
+
+a:hover, a:focus {
+	text-decoration: underline;
+}
+
+a[href^='tel'] {
+	color: inherit;
+}
+
+hr {
+	margin: 10px 0;
+}
+
+/************************************************************************  
+* Text color styles
+*************************************************************************/
+/*.text-primary {}
+.text-secondary {}
+.text-muted {}*/

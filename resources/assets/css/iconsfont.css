@@ -1,0 +1,31 @@
+@font-face {
+ 	font-family: 'Iconsfont';
+ 	src: url('../fonts/Iconsfont/Iconsfont.eot?1533756301');
+	src: url('../fonts/Iconsfont/Iconsfont.eot?#iefix-1533756301') format('embedded-opentype'),
+ 		url('../fonts/Iconsfont/Iconsfont.woff2?1533756301') format('woff2'),
+  		url('../fonts/Iconsfont/Iconsfont.woff?1533756301') format('woff'),
+  		url('../fonts/Iconsfont/Iconsfont.ttf?1533756301') format('truetype');
+ 	font-weight: normal;
+	font-style: normal;
+}
+
+[class^='i-']:before,
+[class*=' i-']:before {
+	font-family: 'Iconsfont';
+	display: inline-block;
+	line-height: 1;
+	font-weight: normal;
+	font-style: normal;
+	speak: none;
+	text-decoration: inherit;
+	font-size: inherit;
+	text-transform: none;
+	text-rendering: optimizeLegibility;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}
+
+
+.i-home:before {
+	content: '\ea01';
+}
