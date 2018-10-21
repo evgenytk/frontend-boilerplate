@@ -1,0 +1,15 @@
+// -----------------------------------------------------------------------------
+// This file contains all application-wide Sass variables.
+// -----------------------------------------------------------------------------
+
+$font-stack: 'Roboto', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'Segoe UI', 'Arial', sans-serif;
+
+$primary-color: #ba1323 !default;
+$secondary-color: #777777 !default;
+
+$breakpoints: (
+  'mobile': 0px,
+  'tablet': 768px,
+  'desktop-small': 992px,
+  'desktop': 1200px
+) !default;

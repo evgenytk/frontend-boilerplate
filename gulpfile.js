@@ -1,26 +1,28 @@
 var webpack = require('webpack'),
 	webpackGulp = require('webpack-stream'),
-	eslint = require('gulp-eslint'),
 	gulp = require('gulp'),
-	concat = require('gulp-concat'),
 	browserSync = require("browser-sync"),
 	rigger = require('gulp-rigger'),
 	tinypng = require('gulp-tinypng-compress'),
+	doiuse = require('doiuse'),
 	gulpif = require('gulp-if'),
 	consolidate = require('gulp-consolidate'),
+	plumber = require('gulp-plumber'),
+	notifier = require('node-notifier'),
+	argv = require('yargs').argv,
+	sourcemaps = require('gulp-sourcemaps'),
+
+	// Iconsfont and SVG
 	iconfont = require('gulp-iconfont'),
-	iconfontCss = require('gulp-iconfont-css'),
 	svgmin = require('gulp-svgmin'),
-	csscomb = require('gulp-csscomb'),
+
+	// Styles
+	sass = require('gulp-sass'),
 	postcss = require('gulp-postcss'),
-	doiuse = require('doiuse'),
 	autoprefixer = require('autoprefixer'),
 	cssnano = require('cssnano'),
 	customProperties = require('postcss-custom-properties'),
-	flexboxFix = require('postcss-flexbugs-fixes'),
-	plumber = require('gulp-plumber'),
-	notifier = require('node-notifier'),
-	argv = require('yargs').argv;
+	flexboxFix = require('postcss-flexbugs-fixes');
 
 var browsersyncConfig = {
     server: {
@@ -28,16 +30,18 @@ var browsersyncConfig = {
     },
     tunnel: false,
     host: 'localhost',
-    port: 9000,
+    port: 3000,
     logLevel: 'silent'
-    // logPrefix: "Browsersync",
 };
 
+/**
+ * Paths to source files
+ * @type {Object}
+ */
 var resources = {
-	css: ['resources/assets/css/*.css'],
-	cssVendor: ['resources/assets/css/vendor/*.css'],
-	js: ['resources/assets/js/**/*.*'],
-	fonts: ['resources/assets/fonts/**/*.*'],
+	scss: ['resources/scss/**/*.scss'],
+	js: ['resources/js/**/*.*'],
+	fonts: ['resources/fonts/**/*.*', '!resources/fonts/**/*.scss'],
 	images: ['resources/images/**/*.*'],
 	favicon: ['resources/images/logo.png'],
 	svg: ['resources/images/svg/**/*.svg'],
@@ -45,27 +49,28 @@ var resources = {
 	htmlIncludes: ['resources/html/includes/*.html']
 };
 
+/**
+ * Webpack log settings
+ * @type {Object}
+ */
 var webpackStatsConfig = {
     colors: true, hash: true, version: true, timings: true, assets: true, chunks: true,
     chunkModules: false, modules: false, children: false, cached: false, reasons: false,
     source: false, errorDetails: true, chunkOrigins: false
 };
 
+/**
+ * TinyPNG API token (https://tinypng.com/)
+ * @type {String}
+ */
 var TINYPNG_API_TOKEN = 'xaJXmnf4FkjwO6AtnvExbz45McXet1l_';
 
 /*
-* Apply CSSComb
+* Styles task
+*
+* Description: compile SASS and using PostCSS plugins
 */
-gulp.task('csscomb', function(){
-	return gulp.src(resources.css)
-		.pipe(csscomb())
-		.pipe(gulp.dest('resources/assets/css'));
-});
-
-/*
-* Applying PostCSS plugins
-*/
-gulp.task('build:css', function(){
+gulp.task('build:scss', function(){
 	var plugins = [
         autoprefixer({browsers: ['last 8 versions'], cascade: false}),
 		customProperties({
@@ -74,54 +79,32 @@ gulp.task('build:css', function(){
 		flexboxFix()
     ];
 
-    if (argv.prod) 
+    if (argv.prod) {
     	plugins.push(cssnano());
 
-	return gulp.src(resources.css)
+    	return gulp.src(resources.scss)
+    		.pipe(sass().on('error', sass.logError))
+    		.pipe(postcss(plugins))
+    		.pipe(gulp.dest('public/assets/css'))
+    		.pipe(browserSync.reload({stream: true}));
+    }
+
+	return gulp.src(resources.scss)
+		.pipe(sourcemaps.init())
+		.pipe(sass().on('error', sass.logError))
 		.pipe(postcss(plugins))
-		.pipe(concat('main.css'))
+		.pipe(sourcemaps.write())
 		.pipe(gulp.dest('public/assets/css'))
 		.pipe(browserSync.reload({stream: true}));
 });
 
 /*
-* Build vendor CSS
+* JS task
+*
+* Description: making JS bundle
 */
-gulp.task('build:cssVendor', function(){
-	var plugins = [];
-
-    if (argv.prod) 
-    	plugins.push(cssnano());
-
-	return gulp.src(resources.cssVendor)
-		.pipe(postcss(plugins))
-		.pipe(concat('vendor.css'))
-		.pipe(gulp.dest('public/assets/css'))
-		.pipe(browserSync.reload({stream: true}));
-});
-
-/*
-* ESLint
-*/
-gulp.task('eslint', function(done){
-	return gulp.src(resources.js)
-			.pipe(eslint())
-			.pipe(eslint.format('codeframe'))
-			.pipe(eslint.result(function(result){
-				if (result.errorCount > 0 || result.warningCount > 0)
-					notifier.notify({
-						title: 'ESLint',
-						message: '⚠️ Warnings: ' + result.warningCount + '\r❌ Errors: ' + result.errorCount
-					})
-			}))
-			.pipe(browserSync.reload({stream: true}));
-});
-
-/*
-* Webpack
-*/
-gulp.task('build:js', ['eslint'], function(done){
-	return gulp.src('resources/assets/js/index.js')
+gulp.task('build:js', function(done){
+	return gulp.src('resources/js/index.js')
 		.pipe(plumber({
 			errorHandler: function(error){
 				notifier.notify({
@@ -145,16 +128,21 @@ gulp.task('build:js', ['eslint'], function(done){
 });
 
 /*
-* Copying fonts
+* Fonts task
+*
+* Description: just moving to /public folder.
 */
-gulp.task('build:fonts', ['build:iconsfont'], function(){
+gulp.task('build:fonts', function(){
 	return gulp.src(resources.fonts)
 		.pipe(gulp.dest('public/assets/fonts'))
 		.pipe(browserSync.reload({stream: true}));
 });
 
 /*
-* Making iconfonts
+* Iconsfont task
+*
+* Description: making your custom iconsfont. 
+* Source SVG located in /resources/images/svg. 
 */
 gulp.task('build:iconsfont', ['optimize:svg'], function(){
 	return gulp.src(resources.svg)
@@ -162,6 +150,7 @@ gulp.task('build:iconsfont', ['optimize:svg'], function(){
 			fontName: 'Iconsfont',
 			appendCodepoints: true,
 			appendUnicode: false,
+			fixedWidth: false,
 			normalize: true,
 			fontHeight: 1000,
 			centerHorizontally: true,
@@ -169,21 +158,23 @@ gulp.task('build:iconsfont', ['optimize:svg'], function(){
 			timestamp: Math.round(Date.now()/1000),
 		}))
 		.on('glyphs', function(glyphs, options) {
-			gulp.src('resources/assets/css/iconsfont/iconsfont.css')
+			gulp.src('resources/fonts/Iconsfont/_iconsfont.scss')
 				.pipe(consolidate('lodash', {
 					glyphs: glyphs,
 					fontName: options.fontName,
 					className: 'i',
 					timestamp: Math.round(Date.now()/1000)
 				}))
-			.pipe(gulp.dest('resources/assets/css'))
+			.pipe(gulp.dest('resources/scss/typography'))
 		})
 		.pipe(gulp.dest('public/assets/fonts/Iconsfont'))
 		.pipe(browserSync.reload({stream: true}));
 });
 
 /*
-* Optimizing svg
+* SVG task
+*
+* Making optimized SVG files for better performance
 */
 gulp.task('optimize:svg', function(){
 	return gulp.src(resources.svg)
@@ -198,7 +189,11 @@ gulp.task('optimize:svg', function(){
 });
 
 /*
-* Build images
+* Images task
+*
+* Description: moving to /public folder. 
+* If you has TinyPNG account, you might use it API for optimize PNG and JPG.
+* After optimizing, images will have a modified signature for prevent re-optimizing.
 */
 gulp.task('build:images', function(){
 
@@ -227,35 +222,13 @@ gulp.task('build:html', function(){
 });
 
 /*
-* Checking browser compatibility
-*/
-gulp.task('browsers', function(){
-	var plugins = [
-        doiuse({
-			browsers: [
-				'ie >= 10',
-				'> 3%'
-			],
-			// ignore: ['rem'],
-			ignoreFiles: ['**/bootstrap4-grid.css', '**/fontawesome-all.css', '**/iconsfont.css'],
-			onFeatureUsage: function (usageInfo) {
-				console.log(usageInfo.message)
-			}
-		}),
-    ];
-	return gulp.src(resources.css)
-		.pipe(postcss(plugins));
-});
-
-/*
 * Main build task
 */
 gulp.task('build', [
-	'csscomb',
-	'build:css',
-	'build:cssVendor',
+	'build:scss',
 	'build:js',
 	'build:fonts',
+	'build:iconsfont',
 	'build:images',
 	'build:html'
 ]);
@@ -264,10 +237,9 @@ gulp.task('build', [
 * Watch task
 */
 gulp.task('watch',function(){
-	gulp.watch(resources.css, ['build:css']);
-	gulp.watch(resources.cssVendor, ['build:cssVendor']);
-	gulp.watch(resources.fonts, ['build:fonts']);
 	gulp.watch(resources.svg, ['build:iconsfont']);
+	gulp.watch(resources.fonts, ['build:fonts']);
+	gulp.watch(resources.scss, ['build:scss']);
 	gulp.watch(resources.js, ['build:js']);
 	gulp.watch(resources.images, ['build:images']);
 	gulp.watch(resources.html, ['build:html']);
